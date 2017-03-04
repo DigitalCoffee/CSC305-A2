@@ -20,6 +20,26 @@ void Renderer::Init(Scene* scene)
     mShaders.SetPreambleFile("preamble.glsl");
 
     mSceneSP = mShaders.AddProgramFromExts({ "scene.vert", "scene.frag" });
+
+	// Shadow map depth texture code
+	glGenTextures(1, &mShadowDepthTO);
+	glBindTexture(GL_TEXTURE_2D, mShadowDepthTO);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, kShadowMapResolution,
+		kShadowMapResolution, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+	const float kShadowBorderDepth[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, kShadowBorderDepth);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	glGenFramebuffers(1, &mShadowFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, mShadowFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, mShadowDepthTO, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);	mShadowSP = mShaders.AddProgramFromExts({ "shadow.vert", "shadow.frag" });
 }
 
 void Renderer::Resize(int width, int height)
