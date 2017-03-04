@@ -109,6 +109,74 @@ void Renderer::Render()
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
+	if (*mShadowSP)
+	{
+		glUseProgram(*mShadowSP);
+
+		GLint SHADOW_MODELWORLD_UNIFORM_LOCATION = glGetUniformLocation(*mShadowSP, "ModelWorld");
+		GLint SHADOW_NORMAL_MODELWORLD_UNIFORM_LOCATION = glGetUniformLocation(*mShadowSP, "Normal_ModelWorld");
+		GLint SHADOW_MODELVIEWPROJECTION_UNIFORM_LOCATION = glGetUniformLocation(*mShadowSP, "ModelViewProjection");
+
+		const Camera& mainCamera = mScene->MainCamera;
+
+		glm::vec3 eye = mainCamera.Eye;
+		glm::vec3 up = mainCamera.Up;
+
+		glm::mat4 worldView = glm::lookAt(eye, eye + mainCamera.Look, up);
+		glm::mat4 viewProjection = glm::perspective(mainCamera.FovY, (float)mBackbufferWidth / mBackbufferHeight, 0.01f, 100.0f);
+		glm::mat4 worldProjection = viewProjection * worldView;
+
+		glBindFramebuffer(GL_FRAMEBUFFER, mShadowFBO);
+		glClearDepth(1.0f);
+		glClear(GL_DEPTH_BUFFER_BIT);
+		glViewport(0, 0, kShadowMapResolution, kShadowMapResolution);
+		glEnable(GL_DEPTH_TEST);
+		glEnable(GL_POLYGON_OFFSET_FILL);
+		glPolygonOffset(mShadowSlopeScaleBias, mShadowDepthBias);
+		for (uint32_t instanceID : mScene->Instances)
+		{
+			// TODO: Draw every object in the scene,
+			// the same way as the scene rendering pass, but you don't need any material properties.
+			// One major different is your viewprojection matrix is now based on the light,
+			// rather than the camera.
+
+			const Instance* instance = &mScene->Instances[instanceID];
+			const Mesh* mesh = &mScene->Meshes[instance->MeshID];
+			const Transform* transform = &mScene->Transforms[instance->TransformID];
+
+			glm::mat4 modelWorld;
+			modelWorld = translate(-transform->RotationOrigin) * modelWorld;
+			modelWorld = mat4_cast(transform->Rotation) * modelWorld;
+			modelWorld = translate(transform->RotationOrigin) * modelWorld;
+			modelWorld = scale(transform->Scale) * modelWorld;
+			modelWorld = translate(transform->Translation) * modelWorld;
+
+			glm::mat3 normal_ModelWorld;
+			normal_ModelWorld = mat3_cast(transform->Rotation) * normal_ModelWorld;
+			normal_ModelWorld = glm::mat3(scale(1.0f / transform->Scale)) * normal_ModelWorld;
+
+			glm::mat4 modelViewProjection = worldProjection * modelWorld;
+
+			glProgramUniformMatrix4fv(*mShadowSP, SHADOW_MODELWORLD_UNIFORM_LOCATION, 1, GL_FALSE, value_ptr(modelWorld));
+			glProgramUniformMatrix3fv(*mShadowSP, SHADOW_NORMAL_MODELWORLD_UNIFORM_LOCATION, 1, GL_FALSE, value_ptr(normal_ModelWorld));
+			glProgramUniformMatrix4fv(*mShadowSP, SHADOW_MODELVIEWPROJECTION_UNIFORM_LOCATION, 1, GL_FALSE, value_ptr(modelViewProjection));
+
+			glBindVertexArray(mesh->MeshVAO);
+			for (size_t meshDrawIdx = 0; meshDrawIdx < mesh->DrawCommands.size(); meshDrawIdx++)
+			{
+				const GLDrawElementsIndirectCommand* drawCmd = &mesh->DrawCommands[meshDrawIdx];
+
+				glDrawElementsBaseVertex(GL_TRIANGLES, drawCmd->count, GL_UNSIGNED_INT, (GLvoid*)(sizeof(GLuint) * drawCmd->firstIndex), drawCmd->baseVertex);
+			}
+			glBindVertexArray(0);
+		}
+		glPolygonOffset(0.0f, 0.0f);
+		glDisable(GL_POLYGON_OFFSET_FILL);
+		glDisable(GL_DEPTH_TEST);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glUseProgram(0);
+	}
+
     // render scene
     if (*mSceneSP)
     {
