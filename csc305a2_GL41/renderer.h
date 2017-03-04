@@ -28,6 +28,11 @@ class Renderer
 	GLfloat mShadowDepthBias;
 	const int kShadowMapResolution = 1024;
 
+	// Debug vars
+	GLuint * mDepthVisSP;
+	GLuint mNullVAO;
+	bool mShowDepthVis;
+
 public:
     void Init(Scene* scene);
     void Resize(int width, int height);
