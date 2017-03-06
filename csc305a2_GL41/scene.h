@@ -48,6 +48,7 @@ struct Transform
     glm::vec3 RotationOrigin;
     glm::quat Rotation;
     glm::vec3 Translation;
+	uint32_t ParentID;
 };
 
 struct Instance

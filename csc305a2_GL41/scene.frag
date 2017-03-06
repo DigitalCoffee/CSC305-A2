@@ -52,7 +52,7 @@ void main()
 	if (mode == 2)		colorLinear = Ambient / 10;
 	else if (mode == 3)	colorLinear = lambertian * diffuseMap;
 	else if (mode == 4)	colorLinear = specular * Specular;
-	else				colorLinear = min(Ambient / 10, visibility) + (lambertian * diffuseMap + specular * Specular);
+	else				colorLinear = min(Ambient / 10, visibility) + lambertian * diffuseMap + specular * Specular;
 
 
 	FragColor = vec4(colorLinear, 1.0);

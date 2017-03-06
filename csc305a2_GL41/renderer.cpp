@@ -143,11 +143,20 @@ void Renderer::Render()
 			const Transform* transform = &mScene->Transforms[instance->TransformID];
 
 			glm::mat4 modelWorld;
-			modelWorld = translate(-transform->RotationOrigin) * modelWorld;
-			modelWorld = mat4_cast(transform->Rotation) * modelWorld;
-			modelWorld = translate(transform->RotationOrigin) * modelWorld;
-			modelWorld = scale(transform->Scale) * modelWorld;
-			modelWorld = translate(transform->Translation) * modelWorld;
+			for (const Transform* curr_transform = transform;
+				true;
+				curr_transform = &mScene->Transforms[curr_transform->ParentID])
+			{
+				modelWorld = translate(-curr_transform->RotationOrigin) * modelWorld;
+				modelWorld = mat4_cast(curr_transform->Rotation) * modelWorld;
+				modelWorld = translate(curr_transform->RotationOrigin) * modelWorld;
+				modelWorld = scale(curr_transform->Scale) * modelWorld;
+				modelWorld = translate(curr_transform->Translation) * modelWorld;
+
+				if (curr_transform->ParentID == -1) {
+					break;
+				}
+			}
 
 			glm::mat3 normal_ModelWorld;
 			normal_ModelWorld = mat3_cast(transform->Rotation) * normal_ModelWorld;
@@ -212,12 +221,21 @@ void Renderer::Render()
             const Mesh* mesh = &mScene->Meshes[instance->MeshID];
             const Transform* transform = &mScene->Transforms[instance->TransformID];
 
-            glm::mat4 modelWorld;
-            modelWorld = translate(-transform->RotationOrigin) * modelWorld;
-            modelWorld = mat4_cast(transform->Rotation) * modelWorld;
-            modelWorld = translate(transform->RotationOrigin) * modelWorld;
-            modelWorld = scale(transform->Scale) * modelWorld;
-            modelWorld = translate(transform->Translation) * modelWorld;
+			glm::mat4 modelWorld;
+			for (const Transform* curr_transform = transform;
+				true;
+				curr_transform = &mScene->Transforms[curr_transform->ParentID])
+			{
+				modelWorld = translate(-curr_transform->RotationOrigin) * modelWorld;
+				modelWorld = mat4_cast(curr_transform->Rotation) * modelWorld;
+				modelWorld = translate(curr_transform->RotationOrigin) * modelWorld;
+				modelWorld = scale(curr_transform->Scale) * modelWorld;
+				modelWorld = translate(curr_transform->Translation) * modelWorld;
+
+				if (curr_transform->ParentID == -1) {
+					break;
+				}
+			}
 
             glm::mat3 normal_ModelWorld;
             normal_ModelWorld = mat3_cast(transform->Rotation) * normal_ModelWorld;

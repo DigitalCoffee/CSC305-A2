@@ -11,6 +11,8 @@
 
 #include <SDL.h>
 
+std::vector<uint32_t> mSpinningTransformIDs;
+
 void Simulation::Init(Scene* scene)
 {
     mScene = scene;
@@ -27,42 +29,35 @@ void Simulation::Init(Scene* scene)
         // scale up the cube
         uint32_t newTransformID = scene->Instances[newInstanceID].TransformID;
         scene->Transforms[newTransformID].Scale = glm::vec3(2.0f);
+		scene->Transforms[newTransformID].ParentID = -1;
     }
 
     loadedMeshIDs.clear();
     LoadMeshesFromFile(mScene, "assets/teapot/teapot.obj", &loadedMeshIDs);
     for (uint32_t loadedMeshID : loadedMeshIDs)
     {
-        // place a teapot on top of the cube
-        {
-            uint32_t newInstanceID;
-            AddMeshInstance(mScene, loadedMeshID, &newInstanceID);
-            uint32_t newTransformID = scene->Instances[newInstanceID].TransformID;
-            scene->Transforms[newTransformID].Translation += glm::vec3(0.0f, 2.0f, 0.0f);
-        }
+		uint32_t newInstanceID1;
+		AddMeshInstance(scene, loadedMeshID, &newInstanceID1);
+		uint32_t newTransformID1 = scene->Instances[newInstanceID1].TransformID;
+		scene->Transforms[newTransformID1].Translation += glm::vec3(0.0f, 2.0f, 0.0f);
+		scene->Transforms[newTransformID1].ParentID = -1;
 
-        // place a teapot on the side
-        {
-            uint32_t newInstanceID;
-            AddMeshInstance(mScene, loadedMeshID, &newInstanceID);
-            uint32_t newTransformID = scene->Instances[newInstanceID].TransformID;
-            scene->Transforms[newTransformID].Translation += glm::vec3(3.0f, 1.0f, 4.0f);
-        }
-
-        // place another teapot on the side
-        {
-            uint32_t newInstanceID;
-            AddMeshInstance(mScene, loadedMeshID, &newInstanceID);
-            uint32_t newTransformID = scene->Instances[newInstanceID].TransformID;
-            scene->Transforms[newTransformID].Translation += glm::vec3(3.0f, 1.0f, -4.0f);
-        }
+		uint32_t newInstanceID2;
+		AddMeshInstance(scene, loadedMeshID, &newInstanceID2);
+		uint32_t newTransformID2 = scene->Instances[newInstanceID2].TransformID;
+		mSpinningTransformIDs.push_back(newTransformID2);
+		scene->Transforms[newTransformID2].Translation += glm::vec3(3.0f, -1.0f, -4.0f);
+		scene->Transforms[newTransformID2].RotationOrigin =	-scene->Transforms[newTransformID2].Translation;
+		scene->Transforms[newTransformID2].ParentID = newTransformID1;
     }
 
     loadedMeshIDs.clear();
     LoadMeshesFromFile(mScene, "assets/floor/floor.obj", &loadedMeshIDs);
     for (uint32_t loadedMeshID : loadedMeshIDs)
     {
-        AddMeshInstance(mScene, loadedMeshID, nullptr);
+		uint32_t newInstanceID;
+		AddMeshInstance(mScene, loadedMeshID, &newInstanceID);
+		scene->Transforms[scene->Instances[newInstanceID].TransformID].ParentID = -1;
     }
 
     Camera mainCamera;
@@ -122,6 +117,13 @@ void Simulation::Update(float deltaTime)
         ImGui::Text("Mouse Pos: (%d, %d)", mx, my);
     }
     ImGui::End();
+
+	float angularVelocity = 30.0f; // rotating at 30 degrees per second
+	for (uint32_t mSpinningTransformID : mSpinningTransformIDs)
+		mScene->Transforms[mSpinningTransformID].Rotation *=
+			glm::angleAxis(
+				glm::radians(angularVelocity * deltaTime),
+				glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
 void* Simulation::operator new(size_t sz)
