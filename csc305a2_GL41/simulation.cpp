@@ -72,6 +72,13 @@ void Simulation::Init(Scene* scene)
     mainCamera.Up = glm::vec3(0.0f, 1.0f, 0.0f);
     mainCamera.FovY = glm::radians(70.0f);
     mScene->MainCamera = mainCamera;
+
+	Light mainLight;
+	mainLight.Position = glm::vec3(12.0f, 7.0f, 12.0f);
+	mainLight.Direction = mainCamera.Look;
+	mainLight.Up = mainCamera.Up;
+	mainLight.FovY = glm::radians(80.0f);
+	mScene->MainLight = mainLight;
 }
 
 void Simulation::HandleEvent(const SDL_Event& ev)

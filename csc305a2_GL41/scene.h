@@ -67,6 +67,15 @@ struct Camera
     float FovY;
 };
 
+struct Light
+{
+	glm::vec3 Position;
+	glm::vec3 Up;
+	glm::vec3 Direction;
+
+	float FovY;
+};
+
 class Scene
 {
 public:
@@ -77,6 +86,7 @@ public:
     packed_freelist<Instance> Instances;
 
     Camera MainCamera;
+	Light MainLight;
 
     void Init();
 };

@@ -113,18 +113,16 @@ void Renderer::Render()
 	{
 		glUseProgram(*mShadowSP);
 
-		GLint SHADOW_MODELWORLD_UNIFORM_LOCATION = glGetUniformLocation(*mShadowSP, "ModelWorld");
-		GLint SHADOW_NORMAL_MODELWORLD_UNIFORM_LOCATION = glGetUniformLocation(*mShadowSP, "Normal_ModelWorld");
 		GLint SHADOW_MODELVIEWPROJECTION_UNIFORM_LOCATION = glGetUniformLocation(*mShadowSP, "ModelViewProjection");
 
-		const Camera& mainCamera = mScene->MainCamera;
+		const Light& mainLight = mScene->MainLight;
 
-		glm::vec3 eye = mainCamera.Eye;
-		glm::vec3 up = mainCamera.Up;
+		glm::vec3 position = mainLight.Position;
+		glm::vec3 up = mainLight.Up;
 
-		glm::mat4 worldView = glm::lookAt(eye, eye + mainCamera.Look, up);
-		glm::mat4 viewProjection = glm::perspective(mainCamera.FovY, (float)mBackbufferWidth / mBackbufferHeight, 0.01f, 100.0f);
-		glm::mat4 worldProjection = viewProjection * worldView;
+		glm::mat4 lightWorldView = glm::lookAt(position, position + mainLight.Direction, up);
+		glm::mat4 lightViewProjection = glm::perspective(mainLight.FovY, 1.0f, 0.01f, 100.0f);
+		glm::mat4 worldProjection = lightViewProjection * lightWorldView;
 
 		glBindFramebuffer(GL_FRAMEBUFFER, mShadowFBO);
 		glClearDepth(1.0f);
@@ -157,8 +155,6 @@ void Renderer::Render()
 
 			glm::mat4 modelViewProjection = worldProjection * modelWorld;
 
-			glProgramUniformMatrix4fv(*mShadowSP, SHADOW_MODELWORLD_UNIFORM_LOCATION, 1, GL_FALSE, value_ptr(modelWorld));
-			glProgramUniformMatrix3fv(*mShadowSP, SHADOW_NORMAL_MODELWORLD_UNIFORM_LOCATION, 1, GL_FALSE, value_ptr(normal_ModelWorld));
 			glProgramUniformMatrix4fv(*mShadowSP, SHADOW_MODELVIEWPROJECTION_UNIFORM_LOCATION, 1, GL_FALSE, value_ptr(modelViewProjection));
 
 			glBindVertexArray(mesh->MeshVAO);
@@ -193,6 +189,7 @@ void Renderer::Render()
         GLint SCENE_SPECULAR_UNIFORM_LOCATION = glGetUniformLocation(*mSceneSP, "Specular");
         GLint SCENE_SHININESS_UNIFORM_LOCATION = glGetUniformLocation(*mSceneSP, "Shininess");
         GLint SCENE_DIFFUSE_MAP_UNIFORM_LOCATION = glGetUniformLocation(*mSceneSP, "DiffuseMa");
+		GLint SCENE_LIGHT_MATRIX_UNIFORM_LOCATION = glGetUniformLocation(*mSceneSP, "lightMatrix");
 
         const Camera& mainCamera = mScene->MainCamera;
 
@@ -228,6 +225,23 @@ void Renderer::Render()
 
             glm::mat4 modelViewProjection = worldProjection * modelWorld;
 
+			// Shadow Mapping Second Pass
+			const Light& mainLight = mScene->MainLight;
+			glm::vec3 lightPos = mainLight.Position;
+			glm::vec3 lightUp = mainLight.Up;
+			glm::mat4 lightWorldView = glm::lookAt(lightPos, lightPos + mainLight.Direction, lightUp);
+			glm::mat4 lightViewProjection = glm::perspective(mainLight.FovY, 1.0f, 0.01f, 100.0f);
+			glm::mat4 lightWorldProjection = lightViewProjection * lightWorldView;
+
+			glm::mat4 lightOffsetMatrix = glm::mat4(
+				0.5f, 0.0f, 0.0f, 0.0f,
+				0.0f, 0.5f, 0.0f, 0.0f,
+				0.0f, 0.0f, 0.5f, 0.0f,
+				0.5f, 0.5f, 0.5f, 1.0f);
+			glm::mat4 lightMatrix = lightOffsetMatrix * lightWorldProjection * modelWorld;
+
+			glProgramUniformMatrix4fv(*mSceneSP, SCENE_LIGHT_MATRIX_UNIFORM_LOCATION, 1, GL_FALSE, value_ptr(lightMatrix));
+
             glProgramUniformMatrix4fv(*mSceneSP, SCENE_MODELWORLD_UNIFORM_LOCATION, 1, GL_FALSE, value_ptr(modelWorld));
             glProgramUniformMatrix3fv(*mSceneSP, SCENE_NORMAL_MODELWORLD_UNIFORM_LOCATION, 1, GL_FALSE, value_ptr(normal_ModelWorld));
             glProgramUniformMatrix4fv(*mSceneSP, SCENE_MODELVIEWPROJECTION_UNIFORM_LOCATION, 1, GL_FALSE, value_ptr(modelViewProjection));
@@ -237,6 +251,11 @@ void Renderer::Render()
             {
                 const GLDrawElementsIndirectCommand* drawCmd = &mesh->DrawCommands[meshDrawIdx];
                 const Material* material = &mScene->Materials[mesh->MaterialIDs[meshDrawIdx]];
+
+				glActiveTexture(GL_TEXTURE0 + SCENE_SHADOW_MAP_TEXTURE_BINDING);
+				GLint SCENE_SHADOW_MAP_UNIFORM_LOCATION = glGetUniformLocation(*mSceneSP, "ShadowMap");
+				glUniform1i(SCENE_SHADOW_MAP_UNIFORM_LOCATION, SCENE_SHADOW_MAP_TEXTURE_BINDING);
+				glBindTexture(GL_TEXTURE_2D, mShadowDepthTO);
 
                 glActiveTexture(GL_TEXTURE0 + SCENE_DIFFUSE_MAP_TEXTURE_BINDING);
                 glProgramUniform1i(*mSceneSP, SCENE_DIFFUSE_MAP_UNIFORM_LOCATION, SCENE_DIFFUSE_MAP_TEXTURE_BINDING);
