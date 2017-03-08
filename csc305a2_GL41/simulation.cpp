@@ -60,6 +60,20 @@ void Simulation::Init(Scene* scene)
 		scene->Transforms[scene->Instances[newInstanceID].TransformID].ParentID = -1;
     }
 
+	loadedMeshIDs.clear();
+	LoadMeshesFromFile(mScene, "assets/sponza/sponza.obj", &loadedMeshIDs);
+	for (uint32_t loadedMeshID : loadedMeshIDs)
+	{
+		if (scene->Meshes[loadedMeshID].Name == "sponza_04")
+		{
+			continue;
+		}
+		uint32_t newInstanceID;
+		AddMeshInstance(mScene, loadedMeshID, &newInstanceID);
+		uint32_t newTransformID = scene->Instances[newInstanceID].TransformID;
+		scene->Transforms[newTransformID].Scale = glm::vec3(1.0f / 50.0f);
+	}
+
     Camera mainCamera;
     mainCamera.Eye = glm::vec3(5.0f);
     glm::vec3 target = glm::vec3(0.0f);
@@ -112,11 +126,13 @@ void Simulation::Update(float deltaTime)
     mDeltaMouseX = 0;
     mDeltaMouseY = 0;
 
-    if (ImGui::Begin("Example GUI Window"))
-    {
-        ImGui::Text("Mouse Pos: (%d, %d)", mx, my);
-    }
-    ImGui::End();
+	Light& light = mScene->MainLight;
+	if (ImGui::Begin("Example GUI Window"))
+	{
+		ImGui::Text("Mouse Pos: (%d, %d)", mx, my);
+		ImGui::SliderFloat3("Light position", value_ptr(light.Position), -40.0f, 40.0f);
+	}
+	ImGui::End();
 
 	float angularVelocity = 30.0f; // rotating at 30 degrees per second
 	for (uint32_t mSpinningTransformID : mSpinningTransformIDs)

@@ -26,7 +26,7 @@ class Renderer
 	GLuint mShadowDepthTO;
 	GLfloat mShadowSlopeScaleBias;
 	GLfloat mShadowDepthBias;
-	const int kShadowMapResolution = (1<<10);
+	const int kShadowMapResolution = (1<<9);
 
 	// Debug vars
 	GLuint * mDepthVisSP;
